@@ -45,7 +45,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-is_admin = st.query_params.get("admin") in ["1", "true", "True", "admin", "sim"] or st.session_state.get("is_admin", False)
+is_admin = st.session_state.get("is_admin", False)
 
 with st.sidebar:
     st.header("Filtro de Exibição")
@@ -104,8 +104,6 @@ with st.sidebar:
 
         st.markdown("---")
         if st.button("🚪 Sair do modo admin", use_container_width=True):
-            if "admin" in st.query_params:
-                del st.query_params["admin"]
             st.session_state["is_admin"] = False
             st.rerun()
     else:
@@ -113,8 +111,7 @@ with st.sidebar:
         with st.expander("🔒 Área de Administração", expanded=False):
             admin_pwd = st.text_input("Senha", type="password", key="admin_pwd_input")
             if st.button("Entrar", key="btn_admin_login"):
-                if admin_pwd in ["ppgmm", "admin"]:
-                    st.query_params["admin"] = "1"
+                if admin_pwd == "ppgmm2025@":
                     st.session_state["is_admin"] = True
                     st.rerun()
                 else:
