@@ -7,6 +7,7 @@ from config_docentes import DOCENTES
 from db import init_db, load_works, stats, clear_db, get_mappings, save_mapping
 from updater import update_all, MIN_YEAR
 from graph import make_graph_figure
+from normalization import norm_text
 
 st.set_page_config(
     page_title="Publicações dos Docentes do Doutorado Multicêntrico em Matemática de Minas Gerais",
@@ -246,8 +247,22 @@ with tabs[3]:
         fig_prod.update_traces(textposition='outside')
         st.plotly_chart(fig_prod, use_container_width=True)
 
-        journals = Counter(w.get("journal") or "Não informado" for w in works)
-        jdf = pd.DataFrame(journals.most_common(15), columns=["Periódico","Publicações"]).sort_values("Publicações", ascending=True)
+        journal_counts = Counter()
+        canonical_journals = {}
+        for w in works:
+            raw_j = (w.get("journal") or "").strip()
+            if not raw_j:
+                raw_j = "Não informado"
+            norm_k = norm_text(raw_j)
+            journal_counts[norm_k] += 1
+            best = canonical_journals.get(norm_k)
+            if not best:
+                canonical_journals[norm_k] = raw_j
+            elif best.isupper() and not raw_j.isupper():
+                canonical_journals[norm_k] = raw_j
+
+        top_journals = [(canonical_journals[k], count) for k, count in journal_counts.most_common(15)]
+        jdf = pd.DataFrame(top_journals, columns=["Periódico","Publicações"]).sort_values("Publicações", ascending=True)
         fig_jour = px.bar(
             jdf, 
             x="Publicações", 
