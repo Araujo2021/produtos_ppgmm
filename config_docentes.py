@@ -12,7 +12,7 @@ DOCENTES_FALLBACK = [
     {"nome": "ABÍLIO LEMOS CARDOSO JÚNIOR", "lattes": "http://lattes.cnpq.br/6917845268623003"},
     {"nome": "ALDO HENRIQUE DE SOUZA MEDEIROS", "lattes": "http://lattes.cnpq.br/2515109720775692"},
     {"nome": "ALEXANDRE MIRANDA ALVES", "lattes": "http://lattes.cnpq.br/9791718459590574"},
-    {"nome": "ALEXEI DERIGLAZOVI", "lattes": "http://lattes.cnpq.br/4611908594979062"},
+    {"nome": "ALEXEI DERIGLAZOV", "lattes": "http://lattes.cnpq.br/4611908594979062"},
     {"nome": "ALINE VILELA ANDRADE", "lattes": "http://lattes.cnpq.br/0620002058872668"},
     {"nome": "ALONSO SEPÚLVEDA CASTELLANOS", "lattes": "http://lattes.cnpq.br/3015162536500942"},
     {"nome": "ANDERSON LUIS ALBUQUERQUE DE ARAUJO", "lattes": "http://lattes.cnpq.br/0149879668454764"},
@@ -62,6 +62,8 @@ def get_docentes(force_reload=False):
             docentes = []
             for _, row in df.iterrows():
                 nome = str(row.get("Nome") or "").strip().upper()
+                if nome in ["ALEXEI DERIGLAZOVI", "ALEXEI A. DERIGLAZOV", "ALEXEI A DERIGLAZOV"]:
+                    nome = "ALEXEI DERIGLAZOV"
                 lattes = str(row.get("Lattes") or "").strip()
                 if not nome or nome == "NAN":
                     continue

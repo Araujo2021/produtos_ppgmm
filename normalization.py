@@ -43,6 +43,17 @@ def match_author_to_docentes(author_str, docentes_list=None):
         from config_docentes import DOCENTES
         docentes_list = DOCENTES
 
+    # Trata caso de nomes alternativos separados por " ou " no Lattes
+    # Ex: "Mello, L. F. ou Fernando Mello, L."
+    if " ou " in author_str:
+        sub_authors = author_str.split(" ou ")
+        res = []
+        for sa in sub_authors:
+            for m in match_author_to_docentes(sa, docentes_list):
+                if m not in res:
+                    res.append(m)
+        return res
+
     a_clean = norm_name(author_str)
     a_parts = [p for p in a_clean.split() if p not in {'de','da','do','das','dos'}]
     if not a_parts:
@@ -67,7 +78,7 @@ def match_author_to_docentes(author_str, docentes_list=None):
             continue
 
         # 2. Caso o sobrenome esteja presente
-        # Ex: "SIMSEN, J." ou "Simsen,J." ou "J. Simsen" ou "SIMSEN, M. S."
+        # Ex: "SIMSEN, J." ou "Simsen,J." ou "J. Simsen" ou "FERNANDES, ANTONIO C."
         if d_surname in a_parts:
             other_parts = [p for p in a_parts if p != d_surname]
             if other_parts:
@@ -76,9 +87,15 @@ def match_author_to_docentes(author_str, docentes_list=None):
 
                 if full_words_in_author:
                     if all(w in d_firsts for w in full_words_in_author):
-                        if not initials_in_author or all(x == y for x, y in zip(initials_in_author, d_initials)):
+                        unwritten_firsts = [w for w in d_firsts if w not in full_words_in_author]
+                        unwritten_initials = [w[0] for w in unwritten_firsts]
+                        if not initials_in_author:
                             matched.append(d_name)
                             continue
+                        elif len(initials_in_author) <= len(unwritten_initials):
+                            if all(x == y for x, y in zip(initials_in_author, unwritten_initials)):
+                                matched.append(d_name)
+                                continue
                 elif initials_in_author:
                     if all(x == y for x, y in zip(initials_in_author, d_initials)):
                         matched.append(d_name)
