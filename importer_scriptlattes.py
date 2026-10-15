@@ -1,5 +1,5 @@
 import json
-from db import get_work_by_key, upsert_work
+from db import get_work_by_key, upsert_work, find_existing_work
 from normalization import canonical_key, norm_name
 from config_docentes import DOCENTES
 
@@ -117,8 +117,14 @@ def parse_scriptlattes_json(json_content):
                 docentes_identificados = ["Desconhecido"]
                 
             key = canonical_key(titulo, doi)
-            existing = get_work_by_key(key)
+            existing = find_existing_work(titulo, doi, ano)
             if existing:
+                # Se a obra existente não tinha DOI e esta nova tem, atualiza!
+                if doi and not existing.get("doi"):
+                    existing["doi"] = doi
+                    existing["canonical_key"] = key
+                    existing["url"] = f"https://doi.org/{doi}"
+
                 docs = set(existing.get("docentes", []))
                 docs.update(docentes_identificados)
                 if len(docs) > 1 and "Desconhecido" in docs:
@@ -130,7 +136,8 @@ def parse_scriptlattes_json(json_content):
                 existing["sources"] = sorted(srcs)
                 
                 # Adota a versão do Lattes (sobrescreve se já existir, para não duplicar formatos diferentes)
-                existing["authors"] = lista_autores
+                if lista_autores:
+                    existing["authors"] = lista_autores
                 
                 upsert_work(existing)
             else:

@@ -104,6 +104,16 @@ with st.sidebar:
             st.rerun()
 
         st.markdown("---")
+        if st.button("🧹 Eliminar duplicidades", use_container_width=True):
+            from db import deduplicate_all_works
+            n_clusters, n_del = deduplicate_all_works()
+            if n_del > 0:
+                st.success(f"{n_del} publicação(ões) duplicada(s) eliminada(s) com sucesso!")
+            else:
+                st.info("Nenhuma duplicidade encontrada no banco.")
+            st.rerun()
+
+        st.markdown("---")
         if st.button("🗑️ Limpar banco de dados", use_container_width=True):
             clear_db()
             st.success("Banco de dados apagado com sucesso. Atualize a página.")
