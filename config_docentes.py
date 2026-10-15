@@ -1,6 +1,14 @@
-# Para evitar homônimos, você pode adicionar a chave "openalex_id" ou "orcid" em cada dicionário.
-# Exemplo: {"nome": "NOME DO DOCENTE", "lattes": "...", "openalex_id": "A5023998991", "orcid": "0000-0002-1694-233X"}
-DOCENTES = [
+import time
+import io
+import requests
+import pandas as pd
+
+# Planilha Google Sheets do PPGMM contendo os docentes
+SHEET_ID = "1TzSV0f0FjKjLKSlnGLiDZspDHEMbXVZ9-4p3aRvF3Zw"
+SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
+
+# Lista de reserva (Fallback) caso a planilha esteja sem conexão
+DOCENTES_FALLBACK = [
     {"nome": "ABÍLIO LEMOS CARDOSO JÚNIOR", "lattes": "http://lattes.cnpq.br/6917845268623003"},
     {"nome": "ALDO HENRIQUE DE SOUZA MEDEIROS", "lattes": "http://lattes.cnpq.br/2515109720775692"},
     {"nome": "ALEXANDRE MIRANDA ALVES", "lattes": "http://lattes.cnpq.br/9791718459590574"},
@@ -35,3 +43,48 @@ DOCENTES = [
     {"nome": "VINÍCIUS VIEIRA FÁVARO", "lattes": "http://lattes.cnpq.br/1260415192839593"},
     {"nome": "WILLIAN VERSOLATI FRANÇA", "lattes": "http://lattes.cnpq.br/5600531171701209"},
 ]
+
+_CACHED_DOCENTES = None
+_LAST_FETCH = 0
+CACHE_TTL = 300  # 5 minutos
+
+def get_docentes(force_reload=False):
+    global _CACHED_DOCENTES, _LAST_FETCH
+    now = time.time()
+    
+    if not force_reload and _CACHED_DOCENTES and (now - _LAST_FETCH < CACHE_TTL):
+        return _CACHED_DOCENTES
+
+    try:
+        resp = requests.get(SHEET_URL, timeout=5)
+        if resp.status_code == 200:
+            df = pd.read_csv(io.StringIO(resp.text))
+            docentes = []
+            for _, row in df.iterrows():
+                nome = str(row.get("Nome") or "").strip().upper()
+                lattes = str(row.get("Lattes") or "").strip()
+                if not nome or nome == "NAN":
+                    continue
+                if lattes.endswith(".0"):
+                    lattes = lattes[:-2]
+                if lattes and not lattes.lower() == "nan" and not lattes.startswith("http"):
+                    lattes = f"http://lattes.cnpq.br/{lattes}"
+                elif lattes.lower() == "nan":
+                    lattes = ""
+                docentes.append({"nome": nome, "lattes": lattes})
+            
+            if docentes:
+                _CACHED_DOCENTES = docentes
+                _LAST_FETCH = now
+                return _CACHED_DOCENTES
+    except Exception as e:
+        print(f"[config_docentes] Aviso: Não foi possível obter docentes da planilha ({e}). Usando dados salvos.")
+
+    if _CACHED_DOCENTES:
+        return _CACHED_DOCENTES
+    return DOCENTES_FALLBACK
+
+def __getattr__(name):
+    if name == "DOCENTES":
+        return get_docentes()
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")

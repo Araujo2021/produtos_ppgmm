@@ -62,6 +62,13 @@ with st.sidebar:
         st.subheader("⚙️ Painel de Administração")
         st.caption("Modo de administrador ativado.")
 
+        if st.button("👥 Sincronizar docentes da planilha", use_container_width=True):
+            from config_docentes import get_docentes
+            docs = get_docentes(force_reload=True)
+            st.success(f"{len(docs)} docentes atualizados da planilha Google!")
+            st.rerun()
+
+        st.markdown("---")
         st.caption("Importação do scriptLattes (Recomendado)")
         uploaded_jsons = st.file_uploader("Selecione os arquivos JSON gerados pelo scriptLattes", type=["json"], accept_multiple_files=True)
         if uploaded_jsons:
@@ -191,8 +198,9 @@ with tabs[1]:
 with tabs[2]:
     st.subheader("Produção por docente")
     selected = st.selectbox("Selecione o docente", [d["nome"] for d in DOCENTES], key="docente_page")
-    meta = next(d for d in DOCENTES if d["nome"] == selected)
-    st.link_button("Abrir Currículo Lattes", meta["lattes"])
+    meta = next((d for d in DOCENTES if d["nome"] == selected), {"nome": selected, "lattes": ""})
+    if meta.get("lattes"):
+        st.link_button("Abrir Currículo Lattes", meta["lattes"])
     own = [w for w in works if selected in w["docentes"]]
     c1,c2,c3 = st.columns(3)
     c1.metric("Publicações", len(own))
@@ -262,11 +270,15 @@ with tabs[4]:
 # ---------- Docentes ----------
 with tabs[5]:
     st.subheader("Docentes cadastrados")
+    st.caption(f"Total de {len(DOCENTES)} docentes cadastrados (sincronizado automaticamente com a planilha Google Sheets).")
     cols = st.columns(3)
     for i,d in enumerate(DOCENTES):
         with cols[i % 3]:
             st.markdown(f"**{d['nome'].title()}**")
-            st.link_button("Lattes", d["lattes"], use_container_width=True)
+            if d.get("lattes"):
+                st.link_button("Lattes", d["lattes"], use_container_width=True)
+            else:
+                st.caption("Lattes não cadastrado")
 
 
 
