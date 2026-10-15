@@ -318,6 +318,34 @@ def deduplicate_all_works():
 
     return len(clusters), len(to_delete_ids)
 
+def reidentify_all_works():
+    from normalization import match_author_to_docentes
+    from config_docentes import DOCENTES
+    
+    with conn() as c:
+        rows = c.execute("SELECT id, authors_json, docentes_json FROM works").fetchall()
+        
+    updated = 0
+    with conn() as c:
+        for r in rows:
+            authors = json.loads(r["authors_json"])
+            docentes = json.loads(r["docentes_json"])
+            
+            new_docentes = set(docentes)
+            for a in authors:
+                for doc in match_author_to_docentes(a, DOCENTES):
+                    new_docentes.add(doc)
+                    
+            if "Desconhecido" in new_docentes and len(new_docentes) > 1:
+                new_docentes.remove("Desconhecido")
+                
+            sorted_docs = sorted(new_docentes)
+            if sorted_docs != docentes:
+                c.execute("UPDATE works SET docentes_json = ? WHERE id = ?", (json.dumps(sorted_docs, ensure_ascii=False), r["id"]))
+                updated += 1
+                
+    return updated
+
 def load_works(min_year=2025):
     with conn() as c:
         rows = c.execute("SELECT * FROM works WHERE year>=? ORDER BY year DESC, title", (min_year,)).fetchall()

@@ -37,3 +37,67 @@ def likely_same_title(a, b, threshold=94):
     if c1 == c2:
         return True
     return fuzz.ratio(c1, c2) >= threshold
+
+def match_author_to_docentes(author_str, docentes_list=None):
+    if docentes_list is None:
+        from config_docentes import DOCENTES
+        docentes_list = DOCENTES
+
+    a_clean = norm_name(author_str)
+    a_parts = [p for p in a_clean.split() if p not in {'de','da','do','das','dos'}]
+    if not a_parts:
+        return []
+
+    matched = []
+    for d in docentes_list:
+        d_name = d["nome"]
+        d_clean = norm_name(d_name)
+        d_parts = [p for p in d_clean.split() if p not in {'de','da','do','das','dos'}]
+        if not d_parts:
+            continue
+
+        d_surname = d_parts[-1]
+        d_firsts = d_parts[:-1]
+        d_initials = [p[0] for p in d_firsts]
+
+        # 1. Caso todas as partes do docente estejam no autor (ordem direta ou inversa)
+        # Ex: "SIMSEN, JACSON" ou "JACSON SIMSEN"
+        if all(p in a_parts for p in d_parts):
+            matched.append(d_name)
+            continue
+
+        # 2. Caso o sobrenome esteja presente
+        # Ex: "SIMSEN, J." ou "Simsen,J." ou "J. Simsen" ou "SIMSEN, M. S."
+        if d_surname in a_parts:
+            other_parts = [p for p in a_parts if p != d_surname]
+            if other_parts:
+                initials_in_author = [p for p in other_parts if len(p) <= 2]
+                full_words_in_author = [p for p in other_parts if len(p) > 2]
+
+                if full_words_in_author:
+                    if all(w in d_firsts for w in full_words_in_author):
+                        if not initials_in_author or all(x == y for x, y in zip(initials_in_author, d_initials)):
+                            matched.append(d_name)
+                            continue
+                elif initials_in_author:
+                    if all(x == y for x, y in zip(initials_in_author, d_initials)):
+                        matched.append(d_name)
+                        continue
+
+        # 3. Caso o docente use nome do meio como citação (ex: LEMOS, NEUMANN)
+        for part in d_firsts:
+            if len(part) > 3 and part in a_parts:
+                other_docs_with_part = [doc for doc in docentes_list if part in norm_name(doc["nome"]).split()]
+                if len(other_docs_with_part) == 1:
+                    other_a_parts = [p for p in a_parts if p != part]
+                    expected_initials = [p[0] for p in d_parts if p != part]
+                    author_initials = [p for p in other_a_parts if len(p) <= 2]
+                    if author_initials:
+                        if all(x == y for x, y in zip(author_initials, expected_initials)):
+                            matched.append(d_name)
+                            break
+                    elif not other_a_parts:
+                        matched.append(d_name)
+                        break
+
+    return matched
