@@ -281,8 +281,9 @@ with tabs[3]:
 with tabs[4]:
     st.subheader("Grafo interativo de colaboração entre docentes")
     st.caption(f"Cada vértice representa um docente. O número exibido sobre a aresta é a quantidade de publicações em coautoria a partir de {selected_min_year}.")
-    fig, edges = make_graph_figure(works, min_year=selected_min_year)
+    fig, edges = make_graph_figure(works)
     if edges:
+        fig.update_layout(title=f"Rede de colaboração entre docentes (a partir de {selected_min_year})")
         st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": True})
         table = pd.DataFrame(
             [{"Docente A": a.title(), "Docente B": b.title(), "Artigos em colaboração": n}

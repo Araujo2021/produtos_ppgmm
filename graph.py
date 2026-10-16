@@ -11,7 +11,8 @@ def coauthorship_edges(works):
                 counter[(ds[i], ds[j])] += 1
     return counter
 
-def make_graph_figure(works, min_year=None):
+def make_graph_figure(works, *args, **kwargs):
+    min_year = kwargs.get("min_year") or (args[0] if args else None)
     edges = coauthorship_edges(works)
     G = nx.Graph()
     for (a,b), n in edges.items():
