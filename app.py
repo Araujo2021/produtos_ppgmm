@@ -280,8 +280,8 @@ with tabs[3]:
 # ---------- Colaborações ----------
 with tabs[4]:
     st.subheader("Grafo interativo de colaboração entre docentes")
-    st.caption("Cada vértice representa um docente. O número exibido sobre a aresta é a quantidade de publicações em coautoria no período selecionado.")
-    fig, edges = make_graph_figure(works)
+    st.caption(f"Cada vértice representa um docente. O número exibido sobre a aresta é a quantidade de publicações em coautoria a partir de {selected_min_year}.")
+    fig, edges = make_graph_figure(works, min_year=selected_min_year)
     if edges:
         st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": True})
         table = pd.DataFrame(
@@ -290,7 +290,7 @@ with tabs[4]:
         )
         st.dataframe(table, use_container_width=True, hide_index=True)
     else:
-        st.info("Nenhuma colaboração interna identificada ainda. Execute a atualização.")
+        st.info(f"Nenhuma colaboração interna identificada a partir de {selected_min_year}.")
 
 # ---------- Docentes ----------
 with tabs[5]:

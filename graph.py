@@ -11,7 +11,7 @@ def coauthorship_edges(works):
                 counter[(ds[i], ds[j])] += 1
     return counter
 
-def make_graph_figure(works):
+def make_graph_figure(works, min_year=None):
     edges = coauthorship_edges(works)
     G = nx.Graph()
     for (a,b), n in edges.items():
@@ -64,8 +64,9 @@ def make_graph_figure(works):
     )
 
     fig = go.Figure(data=edge_traces+[node_trace])
+    title_text = f"Rede de colaboração entre docentes (a partir de {min_year})" if min_year else "Rede de colaboração entre docentes"
     fig.update_layout(
-        title="Rede de colaboração entre docentes (desde 2025)",
+        title=title_text,
         hovermode="closest",
         margin=dict(l=10,r=10,t=50,b=10),
         annotations=annotations,
