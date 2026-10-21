@@ -1,7 +1,7 @@
 import requests
 import pandas as pd
 from db import get_work_by_key, upsert_work
-from normalization import canonical_key, norm_name
+from normalization import canonical_key, norm_name, match_author_to_docentes
 from config_docentes import DOCENTES
 import io
 
@@ -82,70 +82,11 @@ def import_from_sheets(progress=None):
                     if all(part in dn.split() for part in email_parts if len(part) > 2):
                         docentes_identificados.append(d["nome"])
             
-            # 2. Tenta identificar pela lista de autores
+            # 2. Identifica docentes a partir dos autores usando o mecanismo padrão do normalization
             for a in lista_autores:
-                target = norm_name(a)
-                # Tira coisas como 'de ', 'da ' para ajudar no match do sobrenome
-                target_clean = " ".join([p for p in target.split() if p not in {"de", "da", "do", "das", "dos"}])
-                for d in DOCENTES:
-                    dn = norm_name(d["nome"])
-                    if dn == target:
-                        docentes_identificados.append(d["nome"])
-                    else:
-                        ap = target_clean.split()
-                        dp = dn.split()
-                        if len(ap) >= 2 and len(dp) >= 2:
-                            if ap[0] == dp[0] and ap[-1] == dp[-1]:
-                                docentes_identificados.append(d["nome"])
-                            elif ap == dp[:len(ap)]:
-                                docentes_identificados.append(d["nome"])
-                            else:
-                                valid_ap = [w for w in ap if len(w) > 2]
-                                if len(valid_ap) >= 2 and all(w in dp for w in valid_ap):
-                                    docentes_identificados.append(d["nome"])
-                            
-            # 3. Tenta identificar cruzando as partes do nome com a string inteira de autores
-            # Resolve o problema de nomes no formato "SOBRENOME, NOME" misturados por vírgula
-            autores_norm_split = norm_name(autores).split()
-            for d in DOCENTES:
-                if d["nome"] in docentes_identificados:
-                    continue
-                dn_parts = [p for p in norm_name(d["nome"]).split() if len(p) > 2]
-                if dn_parts and all(p in autores_norm_split for p in dn_parts):
-                    docentes_identificados.append(d["nome"])
-            
-            # 4. Fallback radical para formato "SOBRENOME, INICIAIS"
-            # Conta a frequência dos últimos sobrenomes
-            all_parts = []
-            for d in DOCENTES:
-                all_parts.extend([p for p in norm_name(d["nome"]).split() if p not in {'de','da','do','das','dos'}])
-            for a in lista_autores:
-                chunk_parts = [p for p in norm_name(a).split() if p not in {"de", "da", "do", "das", "dos"}]
-                if not chunk_parts: continue
-                target_clean = " ".join(chunk_parts)
-                
-                # Fallback Universal
-                unique_parts_in_chunk = [p for p in chunk_parts if len(p) > 3 and all_parts.count(p) == 1]
-                for up in unique_parts_in_chunk:
-                    for d in DOCENTES:
-                        if d["nome"] in docentes_identificados: continue
-                        dn_parts = [p for p in norm_name(d["nome"]).split() if p not in {"de", "da", "do", "das", "dos"}]
-                        if up in dn_parts:
-                            prof_missing_parts = [p for p in dn_parts if p not in chunk_parts]
-                            prof_expected_initials = [p[0] for p in prof_missing_parts]
-                            author_provided_initials = [p for p in chunk_parts if len(p) <= 2]
-                            
-                            if author_provided_initials:
-                                if all(x == y for x, y in zip(author_provided_initials, prof_expected_initials)):
-                                    docentes_identificados.append(d["nome"])
-                            else:
-                                if len(chunk_parts) == 1:
-                                    if was_split_by_semicolon:
-                                        docentes_identificados.append(d["nome"])
-                                else:
-                                    other_words = [p for p in chunk_parts if len(p) > 2 and p != up]
-                                    if all(w in dn_parts for w in other_words):
-                                        docentes_identificados.append(d["nome"])
+                for m in match_author_to_docentes(a, DOCENTES):
+                    if m not in docentes_identificados:
+                        docentes_identificados.append(m)
                     
             docentes_identificados = list(set(docentes_identificados))
             if not docentes_identificados:

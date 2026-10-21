@@ -71,6 +71,19 @@ def match_author_to_docentes(author_str, docentes_list=None):
         d_firsts = d_parts[:-1]
         d_initials = [p[0] for p in d_firsts]
 
+        # Regra de distinção explícita: Fábio Rodrigues Pereira vs Fabiano Pereira
+        # PEREIRA, F. R. / PEREIRA, FÁBIO R. -> Fábio Rodrigues Pereira (docente do PPGMM)
+        # PEREIRA, F. / FABIANO PEREIRA -> Fabiano Pereira (não é docente do PPGMM)
+        if "pereira" in a_parts and d_surname == "pereira":
+            if "fabiano" in a_parts:
+                continue
+            other_p = [p for p in a_parts if p != "pereira"]
+            initials_p = [p for p in other_p if len(p) <= 2]
+            words_p = [p for p in other_p if len(p) > 2]
+            # Exige conter 'fabio' explicitamente ou a inicial 'r' (de Rodrigues)
+            if "fabio" not in words_p and "r" not in initials_p and "rodrigues" not in words_p:
+                continue
+
         # 1. Caso todas as partes do docente estejam no autor (ordem direta ou inversa)
         # Ex: "SIMSEN, JACSON" ou "JACSON SIMSEN"
         if all(p in a_parts for p in d_parts):

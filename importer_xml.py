@@ -1,6 +1,6 @@
 import xml.etree.ElementTree as ET
 from db import get_work_by_key, upsert_work
-from normalization import canonical_key, norm_name
+from normalization import canonical_key, norm_name, match_author_to_docentes
 from config_docentes import DOCENTES
 
 def parse_lattes_xml(xml_content, progress_callback=None):
@@ -66,45 +66,11 @@ def parse_lattes_xml(xml_content, progress_callback=None):
             if dono_identificado:
                 docentes_identificados.append(dono_identificado)
                 
-            # Identifica os outros autores
-            last_names = [norm_name(d["nome"]).split()[-1] for d in DOCENTES]
+            # Identifica os outros autores usando o padrão do normalization
             for a in lista_autores:
-                target_clean = norm_name(a).replace("de ", "").replace("da ", "").replace("do ", "").strip()
-                if not target_clean: continue
-                chunk_parts = target_clean.split()
-                
-                # Full matching
-                dn_parts_a = target_clean.split()
-                for d in DOCENTES:
-                    if d["nome"] in docentes_identificados: continue
-                    dn = norm_name(d["nome"])
-                    dp = dn.split()
-                    if len(dn_parts_a) >= 2 and len(dp) >= 2:
-                        if dn_parts_a[0] == dp[0] and dn_parts_a[-1] == dp[-1]:
-                            docentes_identificados.append(d["nome"])
-                        elif dn_parts_a == dp[:len(dn_parts_a)]:
-                            docentes_identificados.append(d["nome"])
-                            
-                # Fallback único
-                if len(chunk_parts) == 1:
-                    last_n = chunk_parts[0]
-                    if len(last_n) > 3 and last_names.count(last_n) == 1:
-                        for d in DOCENTES:
-                            if d["nome"] not in docentes_identificados and norm_name(d["nome"]).split()[-1] == last_n:
-                                docentes_identificados.append(d["nome"])
-                elif len(chunk_parts) > 1:
-                    first_word = chunk_parts[0]
-                    last_word = chunk_parts[-1]
-                    if len(first_word) > 3 and last_names.count(first_word) == 1:
-                        if all(len(p) <= 2 for p in chunk_parts[1:]):
-                            for d in DOCENTES:
-                                if d["nome"] not in docentes_identificados and norm_name(d["nome"]).split()[-1] == first_word:
-                                    docentes_identificados.append(d["nome"])
-                    if len(last_word) > 3 and last_names.count(last_word) == 1:
-                        if all(len(p) <= 2 for p in chunk_parts[:-1]):
-                            for d in DOCENTES:
-                                if d["nome"] not in docentes_identificados and norm_name(d["nome"]).split()[-1] == last_word:
-                                    docentes_identificados.append(d["nome"])
+                for m in match_author_to_docentes(a, DOCENTES):
+                    if m not in docentes_identificados:
+                        docentes_identificados.append(m)
                                     
             if not docentes_identificados:
                 docentes_identificados = ["Desconhecido"]
