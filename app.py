@@ -115,10 +115,13 @@ with st.sidebar:
             st.rerun()
 
         st.markdown("---")
-        if st.button("🗑️ Limpar banco de dados", use_container_width=True):
-            clear_db()
-            st.success("Banco de dados apagado com sucesso. Atualize a página.")
-            st.rerun()
+        with st.expander("⚠️ Zona de Perigo: Limpar Banco", expanded=False):
+            st.caption("Esta ação apagará permanentemente todas as publicações do catálogo.")
+            confirm_clear = st.checkbox("Tenho certeza de que desejo apagar todo o banco", key="chk_confirm_clear")
+            if st.button("🗑️ Limpar banco de dados", type="primary", use_container_width=True, disabled=not confirm_clear):
+                clear_db()
+                st.success("Banco de dados apagado com sucesso. Atualize a página.")
+                st.rerun()
 
         st.markdown("---")
         if st.button("🚪 Sair do modo admin", use_container_width=True):
