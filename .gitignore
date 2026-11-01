@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 .DS_Store
 .streamlit/credentials.toml
+.streamlit/secrets.toml
 test_*.py
 test.csv
 fix_*.py

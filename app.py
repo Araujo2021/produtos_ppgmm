@@ -129,7 +129,22 @@ with st.sidebar:
         with st.expander("🔒 Área de Administração", expanded=False):
             admin_pwd = st.text_input("Senha", type="password", key="admin_pwd_input")
             if st.button("Entrar", key="btn_admin_login"):
-                if admin_pwd == "ppgmm2025@":
+                import secrets, hashlib
+                configured_pwd = None
+                try:
+                    configured_pwd = st.secrets.get("ADMIN_PASSWORD")
+                except Exception:
+                    pass
+
+                if configured_pwd:
+                    is_valid = secrets.compare_digest(admin_pwd, str(configured_pwd))
+                else:
+                    # Hash criptográfico SHA-256 de contingência (oculta a senha do código público)
+                    expected_hash = "987592a69224a645406a3855be261f97962e6695ee3d1c9812ecc54ca33d8636"
+                    input_hash = hashlib.sha256(admin_pwd.encode("utf-8")).hexdigest()
+                    is_valid = secrets.compare_digest(input_hash, expected_hash)
+
+                if is_valid:
                     st.session_state["is_admin"] = True
                     st.rerun()
                 else:
